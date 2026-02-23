@@ -92,3 +92,25 @@ const MENU_ITEMS = [
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
             >
+
+                 <ul className={sidebarStyles.mobileMenuList}>
+                    {MENU_ITEMS.map(({ text, path, icon }) => (
+                      <motion.li key={text} whileTap={{ scale: 0.98 }}>
+                        <Link
+                          to={path}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            sidebarStyles.mobileMenuItem.base,
+                            pathname === path 
+                              ? sidebarStyles.mobileMenuItem.active 
+                              : sidebarStyles.mobileMenuItem.inactive
+                          )}
+                        >
+                          <span className={pathname === path ? sidebarStyles.menuIcon.active : sidebarStyles.menuIcon.inactive}>
+                            {icon}
+                          </span>
+                          <span>{text}</span>
+                        </Link>
+                      </motion.li>
+                    ))}
+                  </ul>
