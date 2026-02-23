@@ -67,18 +67,6 @@ const MENU_ITEMS = [
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                 >
- 
-
-      <motion.button
-        onClick={() => setMobileOpen(prev => !prev)}
-        className={sidebarStyles.mobileMenuButton}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        aria-expanded={mobileOpen}
-        aria-label={mobileOpen ? "Close menu" : "Open menu"}
-      >
-        {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-      </motion.button>
 
 
 
