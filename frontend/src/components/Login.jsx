@@ -1,4 +1,12 @@
-
+ catch (err) {
+      console.error("Login error:", err?.response || err);
+      const serverMsg =
+        err.response?.data?.message ||
+        (err.response?.data ? JSON.stringify(err.response.data) : null) ||
+        err.message ||
+        "Login failed";
+      setError(serverMsg);
+    }
    
           {error && (
             <div className={loginStyles.errorContainer}>
