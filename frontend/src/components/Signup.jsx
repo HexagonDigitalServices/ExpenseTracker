@@ -1,3 +1,12 @@
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
 const validateForm = () => {
     const newErrors = {};
 
@@ -20,7 +29,41 @@ const validateForm = () => {
   };
 
 
-  catch (err) {
+    const data = res.data || {};
+      const token = data.token ?? null;
+      let profile = data.user ?? null;
+      if (!profile) {
+        // check for any extra fields returned that could be user info
+        const copy = { ...data };
+        delete copy.token;
+        delete copy.user;
+        if (Object.keys(copy).length) profile = copy;
+      }
+
+      if (!profile && token) {
+        try {
+          profile = await fetchProfile(token);
+        } catch (fetchErr) {
+          console.warn("Could not fetch profile after signup token:", fetchErr);
+          profile = null;
+        }
+      }
+
+      if (!profile) profile = { name, email };
+      persistAuth(profile, token);
+      if (typeof onSignup === "function") {
+        try {
+          onSignup(profile, rememberMe, token);
+        } catch (callErr) {
+          console.warn("onSignup threw:", callErr);
+          navigate("/");
+        }
+      } else {
+        navigate("/");
+      }
+      setPassword("");
+    }
+catch (err) {
       console.error("Signup error:", err?.response || err);
       if (err.response?.data?.errors) {
         setErrors(err.response.data.errors);
@@ -29,7 +72,7 @@ const validateForm = () => {
       } else {
         setErrors({ api: err.message || "An unexpected error occurred" });
       }
-    } 
+    }
 
  
                 <>
