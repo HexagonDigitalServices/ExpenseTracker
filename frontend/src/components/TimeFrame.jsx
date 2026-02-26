@@ -1,4 +1,3 @@
-// components/TimeFrameSelector.jsx
 import React from "react";
 
 const TimeFrameSelector = ({ 
