@@ -1,56 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useOutletContext } from "react-router-dom";
-import {
-  Plus,
-  DollarSign,
-  ArrowDown,
-  ShoppingCart,
-  TrendingUp,
-  TrendingDown,
-  PieChart as PieChartIcon,
-  BarChart2,
-  Wallet,
-  PiggyBank,
-  TrendingUp as ProfitIcon,
-  ChevronDown,
-  ChevronUp
-} from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import axios from "axios";
-import AddTransactionModal from "../components/Add";
-import FinancialCard from "../components/FinancialCard";
-import GaugeCard from "../components/GaugeCard";
-import { getTimeFrameRange, getPreviousTimeFrameRange, calculateData } from "../components/Helpers";
-import { GAUGE_COLORS, COLORS, INCOME_CATEGORY_ICONS, EXPENSE_CATEGORY_ICONS } from "../assets/color";
-import { dashboardStyles, trendStyles, chartStyles } from "../assets/dummyStyles";
-
-const API_BASE = "http://localhost:4000/api";
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-/**
- * Helper: convert date (or datetime) to ISO by attaching client current time
- * - If `dateValue` is "YYYY-MM-DD" (length 10) => attach current HH:MM:SS
- * - Otherwise attempt to parse and return ISO
- * - Fallback to now if parsing fails
- */
 function toIsoWithClientTime(dateValue) {
   if (!dateValue) {
     return new Date().toISOString();
   }
 
-  // Plain date YYYY-MM-DD
   if (typeof dateValue === "string" && dateValue.length === 10) {
     const now = new Date();
-    const hhmmss = now.toTimeString().slice(0, 8); // "HH:MM:SS"
+    const hhmmss = now.toTimeString().slice(0, 8);
     const combined = new Date(`${dateValue}T${hhmmss}`);
     return combined.toISOString();
   }
 
-  // Already a datetime or ISO-like string
   try {
     return new Date(dateValue).toISOString();
   } catch (err) {
@@ -58,8 +17,7 @@ function toIsoWithClientTime(dateValue) {
   }
 }
 
-const Dashboard = () => {
-  // Get refreshTransactions from the outlet context
+const Dashboard = () => 
   const { 
     transactions: outletTransactions = [], 
     timeFrame = "monthly", 
@@ -85,13 +43,10 @@ const Dashboard = () => {
   const timeFrameRange = useMemo(() => getTimeFrameRange(timeFrame), [timeFrame]);
   const prevTimeFrameRange = useMemo(() => getPreviousTimeFrameRange(timeFrame), [timeFrame]);
 
-  // Function to check if a date is within a range (date-portion comparison)
   const isDateInRange = (date, start, end) => {
     const transactionDate = new Date(date);
     const startDate = new Date(start);
     const endDate = new Date(end);
-    
-    // Compare based on day range — include full end day
     transactionDate.setHours(0, 0, 0, 0);
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
@@ -113,7 +68,6 @@ const Dashboard = () => {
     [outletTransactions, prevTimeFrameRange]
   );
 
-  // Calculated data (fallback)
   const currentTimeFrameData = useMemo(() => {
     const data = calculateData(filteredTransactions);
     data.savings = data.income - data.expenses;
@@ -126,7 +80,6 @@ const Dashboard = () => {
     return data;
   }, [prevFilteredTransactions]);
 
-  // Update gauge data when time frame changes or currentTimeFrameData changes
   useEffect(() => {
     const maxValues = {
       income: Math.max(currentTimeFrameData.income, 5000),
@@ -141,8 +94,6 @@ const Dashboard = () => {
     ]);
   }, [currentTimeFrameData, timeFrame]);
 
-  // Use overviewMeta (server) when available for the monthly summary cards,
-  // otherwise fall back to locally computed values.
   const displayIncome =
     timeFrame === "monthly" && typeof overviewMeta.monthlyIncome === "number"
       ? overviewMeta.monthlyIncome
@@ -158,7 +109,6 @@ const Dashboard = () => {
       ? overviewMeta.savings
       : currentTimeFrameData.savings;
 
-  // Expense change percentage (safe guard when prev is 0)
   const expenseChange = useMemo(() => {
     const prev = prevTimeFrameData.expenses;
     const curr = displayExpenses;
@@ -169,7 +119,6 @@ const Dashboard = () => {
     return Math.round(((curr - prev) / prev) * 100);
   }, [prevTimeFrameData, displayExpenses]);
 
-  // Expense distribution — prefer server distribution when provided
   const financialOverviewData = useMemo(() => {
     if (
       timeFrame === "monthly" &&
@@ -197,7 +146,6 @@ const Dashboard = () => {
     }));
   }, [filteredTransactions, overviewMeta, timeFrame]);
 
-  // build server-provided recent lists (if present) and fall back to filtered lists
   const serverRecent = overviewMeta.recentTransactions || [];
   const serverRecentIncome = serverRecent
     .filter((t) => t.type === "income")
@@ -220,8 +168,6 @@ const Dashboard = () => {
     [filteredTransactions]
   );
 
-  // For monthly time frame, use server data if available, otherwise use filtered data
-  // For daily/weekly, always use filtered data
   const incomeListForDisplay =
     timeFrame === "monthly" && serverRecentIncome.length > 0
       ? serverRecentIncome
@@ -232,7 +178,6 @@ const Dashboard = () => {
       ? serverRecentExpense
       : expenseTransactions;
 
-  // Determine how many transactions to show based on showAll state
   const displayedIncome = showAllIncome 
     ? incomeListForDisplay 
     : incomeListForDisplay.slice(0, 3);
@@ -240,16 +185,6 @@ const Dashboard = () => {
   const displayedExpense = showAllExpense 
     ? expenseListForDisplay 
     : expenseListForDisplay.slice(0, 3);
-
-  // fetches server-side aggregates and recent transactions
-  const fetchDashboardOverview = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_BASE}/dashboard`, {
-        headers: getAuthHeader(),
-      });
-      if (res?.data?.success) {
-        const data = res.data.data;
 
         // normalize recent transactions for overview
         // IMPORTANT: keep the full ISO timestamp in `date` so charting by hour works
@@ -325,188 +260,14 @@ const Dashboard = () => {
       }
     } catch (err) {
       console.error("Failed to fetch dashboard overview:", err?.response || err.message || err);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // initial load: fetch overview
   useEffect(() => {
     fetchDashboardOverview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Add / edit / delete handlers
-  const handleAddTransaction = async () => {
-    if (!newTransaction.description || !newTransaction.amount) return;
-
-    // Build payload: convert date-only to ISO with client time to preserve hour
-    const payload = {
-      date: toIsoWithClientTime(newTransaction.date),
-      description: newTransaction.description,
-      amount: parseFloat(newTransaction.amount),
-      category: newTransaction.category,
-    };
-
-    try {
-      setLoading(true);
-      if (newTransaction.type === "income") {
-        await axios.post(`${API_BASE}/income/add`, payload, {
-          headers: getAuthHeader(),
-        });
-      } else {
-        await axios.post(`${API_BASE}/expense/add`, payload, {
-          headers: getAuthHeader(),
-        });
-      }
-
-      // Refresh the layout data after successful addition
-      await refreshTransactions();
-      
-      // Refresh the dashboard overview
-      await fetchDashboardOverview();
-
-      // reset the add form and close modal
-      setNewTransaction({
-        date: new Date().toISOString().split("T")[0],
-        description: "",
-        amount: "",
-        type: "expense",
-        category: "Food",
-      });
-      setShowModal(false);
-    } catch (err) {
-      console.error("Failed to add transaction:", err?.response || err.message || err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className={dashboardStyles.container}>
-      {/* Header */}
-      <div className={dashboardStyles.headerContainer}>
-        <div className={dashboardStyles.headerContent}>
-          <div>
-            <h1 className={dashboardStyles.headerTitle}>
-              Finance Dashboard
-            </h1>
-            <p className={dashboardStyles.headerSubtitle}>Track your income and expenses</p>
-          </div>
-          <button
-            onClick={() => setShowModal(true)}
-            className={dashboardStyles.addButton}
-          >
-            <Plus size={20} />
-            Add Transaction
-          </button>
-        </div>
-
-        {/* Time Frame Selector */}
-        <div className={dashboardStyles.timeFrameContainer}>
-          <div className={dashboardStyles.timeFrameWrapper}>
-            {["daily", "weekly", "monthly"].map((frame) => (
-              <button
-                key={frame}
-                onClick={() => setTimeFrame(frame)}
-                className={dashboardStyles.timeFrameButton(timeFrame === frame)}
-              >
-                {frame.charAt(0).toUpperCase() + frame.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className={dashboardStyles.summaryGrid}>
-        <FinancialCard
-          icon={
-            <div className={dashboardStyles.walletIconContainer}>
-              <Wallet className="w-5 h-5 text-teal-600" />
-            </div>
-          }
-          label="Total Balance"
-          value={`$${Math.round(displayIncome - displayExpenses).toLocaleString()}`}
-          additionalContent={
-            <div className="flex items-center gap-2 mt-2 text-sm">
-              <span className={dashboardStyles.balanceBadge}>
-                +${Math.round(displayIncome).toLocaleString()}
-              </span>
-              <span className={dashboardStyles.expenseBadge}>
-                -${Math.round(displayExpenses).toLocaleString()}
-              </span>
-            </div>
-          }
-        />
-
-        <FinancialCard
-          icon={
-            <div className={dashboardStyles.arrowDownIconContainer}>
-              <ArrowDown className="w-5 h-5 text-orange-600" />
-            </div>
-          }
-          label={`${timeFrameRange.label} Expenses`}
-          value={`$${Math.round(displayExpenses).toLocaleString()}`}
-          additionalContent={
-            <div className={`mt-2 text-xs flex items-center gap-1 ${expenseChange >= 0 ? trendStyles.positive : trendStyles.negative}`}>
-              {expenseChange >= 0 ? (
-                <TrendingUp className="w-4 h-4" />
-              ) : (
-                <TrendingDown className="w-4 h-4" />
-              )}
-              <span>
-                {Math.abs(expenseChange)}%{" "}
-                {expenseChange >= 0 ? "increase" : "decrease"} from{" "}
-                {prevTimeFrameRange.label}
-              </span>
-            </div>
-          }
-        />
-
-        <FinancialCard
-          icon={
-            <div className={dashboardStyles.piggyBankIconContainer}>
-              <PiggyBank className="w-5 h-5 text-cyan-600" />
-            </div>
-          }
-          label={`${timeFrameRange.label} Savings`}
-          value={`$${Math.round(displaySavings).toLocaleString()}`}
-          additionalContent={
-            <div className="mt-2 text-xs text-cyan-600 flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <BarChart2 className="w-4 h-4" />
-                <span>
-                  {displayIncome > 0
-                    ? Math.round((displaySavings / displayIncome) * 100)
-                    : 0}
-                  % of income
-                </span>
-              </div>
-
-              {typeof overviewMeta.savingsRate === "number" && (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  overviewMeta.savingsRate < 0 ? trendStyles.negativeRate : trendStyles.positiveRate
-                }`}>
-                  {overviewMeta.savingsRate}%
-                </span>
-              )}
-            </div>
-          }
-        />
-      </div>
-
-      {/* Gauges */}
-      <div className={dashboardStyles.gaugeGrid}>
-        {gaugeData.map((gauge) => (
-          <GaugeCard
-            key={gauge.name}
-            gauge={gauge}
-            colorInfo={GAUGE_COLORS[gauge.name]}
-            timeFrameLabel={timeFrameRange.label}
-          />
-        ))}
-      </div>
+  
 
       {/* Expense distribution pie - Hidden on mobile */}
       <div className={dashboardStyles.pieChartContainer}>
@@ -699,17 +460,4 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Add Transaction Modal */}
-      <AddTransactionModal
-        showModal={showModal}
-        setShowModal={setShowModal}
-        newTransaction={newTransaction}
-        setNewTransaction={setNewTransaction}
-        handleAddTransaction={handleAddTransaction}
-        loading={loading}
-      />
-    </div>
-  );
-};
-
-export default Dashboard;
+    
