@@ -1,3 +1,38 @@
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useOutletContext } from "react-router-dom";
+import {
+  Plus,
+  DollarSign,
+  Download,
+  Eye,
+  Calendar,
+  TrendingUp,
+  Filter,
+  BarChart2,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Cell,
+  ReferenceLine,
+} from "recharts";
+import axios from "axios";
+import { exportToExcel } from "../utils/exportUtils";
+import AddTransactionModal from "../components/Add";
+import TransactionItem from "../components/TransactionItem";
+import TimeFrameSelector from "../components/TimeFrame";
+import FinancialCard from "../components/FinancialCard";
+import { getTimeFrameRange, generateChartPoints } from "../components/Helpers";
+import { INCOME_COLORS, CATEGORY_ICONS_Inc } from "../assets/color";
+import { incomeStyles as styles } from "../assets/dummyStyles";
+
+const API_BASE = "http://localhost:4000/api";
+
 function toIsoWithClientTime(dateValue) {
   if (!dateValue) {
     return new Date().toISOString();
@@ -130,8 +165,7 @@ const FilterSection = ({ filter, setFilter, handleExport }) => (
   </div>
 );
 
-
-
+const IncomePage = () => {
   const {
     transactions: outletTransactions = [],
     timeFrame = "monthly",
@@ -451,3 +485,184 @@ const FilterSection = ({ filter, setFilter, handleExport }) => (
       }
     }
   }, [getAuthHeaders, filteredTransactions]);
+
+  return (
+    <div className={styles.wrapper}>
+      <div className={styles.headerContainer}>
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.headerTitle}>Income Overview</h1>
+            <p className={styles.headerSubtitle}>
+              Track and manage your income sources
+            </p>
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className={styles.addButton}
+            disabled={loading}
+          >
+            <Plus size={18} className="md:size-5" />{" "}
+            {loading ? "Processing..." : "Add Income"}
+          </button>
+        </div>
+
+        <div className={styles.timeFrameContainer}>
+          <TimeFrameSelector
+            timeFrame={timeFrame}
+            setTimeFrame={setTimeFrame}
+            options={["daily", "weekly", "monthly", "yearly"]}
+            color="teal"
+          />
+        </div>
+      </div>
+
+      <div className={styles.summaryGrid}>
+        <FinancialCard
+          icon={
+            <div className={styles.iconGreen}>
+              <DollarSign
+                className={`w-4 h-4 md:w-5 md:h-5 ${styles.textGreen}`}
+              />
+            </div>
+          }
+          label="Total Income"
+          value={`$${Number(totalIncome || 0).toLocaleString()}`}
+          additionalContent={
+            <div className="mt-2 text-xs text-gray-500 flex items-center">
+              <Calendar className="w-3 h-3 mr-1" /> {timeFrameRange.label}
+            </div>
+          }
+        />
+
+        <FinancialCard
+          icon={
+            <div className={styles.iconBlue}>
+              <BarChart2
+                className={`w-4 h-4 md:w-5 md:h-5 ${styles.textBlue}`}
+              />
+            </div>
+          }
+          label="Average Income"
+          value={`$${Number(averageIncome || 0).toLocaleString()}`}
+          additionalContent={
+            <div className="mt-2 text-xs text-gray-500 flex items-center">
+              <Calendar className="w-3 h-3 mr-1" /> {transactionsCount}{" "}
+              transactions
+            </div>
+          }
+        />
+
+        <FinancialCard
+          icon={
+            <div className={styles.iconPurple}>
+              <TrendingUp
+                className={`w-4 h-4 md:w-5 md:h-5 ${styles.textPurple}`}
+              />
+            </div>
+          }
+          label="Transactions"
+          value={transactionsCount}
+          additionalContent={
+            <div className="mt-2 text-xs text-gray-500 flex items-center">
+              <Calendar className="w-3 h-3 mr-1" />
+              {filter === "all" ? "All records" : "Filtered records"}
+            </div>
+          }
+        />
+      </div>
+
+      <IncomeChart
+        chartData={chartData}
+        timeFrame={timeFrame}
+        timeFrameRange={timeFrameRange}
+      />
+
+      <div className={styles.listContainer}>
+        <div className={styles.header}>
+          <h3 className={styles.sectionTitle}>
+            <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-500" />
+            Income Transactions
+            <span className="text-sm text-gray-500 font-normal">
+              {" "}
+              ({timeFrameRange.label})
+            </span>
+          </h3>
+
+          <FilterSection
+            filter={filter}
+            setFilter={setFilter}
+            handleExport={handleExport}
+          />
+        </div>
+
+        <div className={styles.transactionList}>
+          {filteredTransactions
+            .slice(0, showAll ? filteredTransactions.length : 8)
+            .map((transaction) => (
+              <TransactionItem
+                key={transaction.id}
+                transaction={transaction}
+                isEditing={editingId === transaction.id}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                onSave={handleEditTransaction}
+                onCancel={() => setEditingId(null)}
+                onDelete={handleDeleteTransaction}
+                type="income"
+                categoryIcons={CATEGORY_ICONS_Inc}
+                setEditingId={setEditingId}
+              />
+            ))}
+
+          {!showAll && filteredTransactions.length > 8 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className={styles.viewAllButton}
+            >
+              <Eye size={18} /> View All {filteredTransactions.length}{" "}
+              Transactions
+            </button>
+          )}
+
+          {filteredTransactions.length === 0 && (
+            <div className={styles.emptyStateContainer}>
+              <div className={styles.emptyStateIcon}>
+                <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-green-400" />
+              </div>
+              <p className={styles.emptyStateText}>
+                No income transactions found
+              </p>
+              <p className={styles.emptyStateSubtext}>
+                {filter === "all"
+                  ? "You haven't recorded any income yet"
+                  : `No ${filter} transactions found`}
+              </p>
+              <button
+                onClick={() => setShowModal(true)}
+                className={styles.emptyStateButton}
+              >
+                <Plus size={16} className="md:size-5" /> Add Income
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AddTransactionModal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        newTransaction={newTransaction}
+        setNewTransaction={setNewTransaction}
+        handleAddTransaction={handleAddTransaction}
+        loading={loading}
+        type="income"
+        title="Add New Income"
+        buttonText="Add Income"
+        categories={["Salary", "Freelance", "Investment", "Bonus", "Other"]}
+        color="teal"
+      />
+    </div>
+  );
+};
+
+export default Income;
