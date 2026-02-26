@@ -1,4 +1,4 @@
-{
+const TransactionItem = ({
   transaction,
   isEditing,
   editForm,
@@ -11,8 +11,7 @@
   setEditingId,
   amountClass = "font-bold truncate block text-right",
   iconClass = "p-3 rounded-xl flex-shrink-0",
-}
-
+}) => {
   const [errors, setErrors] = useState({ description: "", amount: "" });
 
   const classes = colorClasses[type];
@@ -36,4 +35,11 @@
 
     setErrors(nextErrors);
     return !nextErrors.description && !nextErrors.amount;
+  };
+
+  const handleSaveClick = () => {
+    if (validate()) {
+      setErrors({ description: "", amount: "" });
+      onSave();
+    }
   };
