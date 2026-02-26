@@ -260,11 +260,7 @@ const Dashboard = () =>
     }
   };
 
-  useEffect(() => {
-    fetchDashboardOverview();
-  }, []);
 
-  
 
       {/* Expense distribution pie - Hidden on mobile */}
       <div className={dashboardStyles.pieChartContainer}>
