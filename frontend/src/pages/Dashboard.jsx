@@ -261,8 +261,7 @@ const Dashboard = () =>
   };
 
 
-
-      {/* Expense distribution pie - Hidden on mobile */}
+    {/* Expense distribution pie - Hidden on mobile */}
       <div className={dashboardStyles.pieChartContainer}>
         <div className={dashboardStyles.pieChartHeader}>
           <h3 className={dashboardStyles.pieChartTitle}>
@@ -318,7 +317,6 @@ const Dashboard = () =>
         </div>
       </div>
 
-      {/* Income & Expense lists - Made responsive */}
       <div className={dashboardStyles.listsGrid}>
         {/* Income Column */}
         <div className={dashboardStyles.listContainer}>
@@ -453,4 +451,3 @@ const Dashboard = () =>
         </div>
       </div>
 
-    
