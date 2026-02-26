@@ -186,13 +186,12 @@ const Dashboard = () =>
     ? expenseListForDisplay 
     : expenseListForDisplay.slice(0, 3);
 
-        // normalize recent transactions for overview
-        // IMPORTANT: keep the full ISO timestamp in `date` so charting by hour works
+    
         const recent = (data.recentTransactions || []).map((item) => {
           const typeFromServer =
             item.type || (item.category ? "expense" : "income");
           const amountNum = Number(item.amount) || 0;
-          // Keep full ISO timestamp for date (fallback to createdAt or now)
+
           const isoDate = item.date
             ? new Date(item.date).toISOString()
             : item.createdAt
@@ -201,7 +200,7 @@ const Dashboard = () =>
 
           return {
             id: item._id || item.id || Date.now() + Math.random(),
-            date: isoDate, // full ISO timestamp (preserves hour)
+            date: isoDate,
             description:
               item.description ||
               item.note ||
@@ -218,7 +217,6 @@ const Dashboard = () =>
           };
         });
 
-        // store recent in overview meta
         setOverviewMeta((prev) => ({
           ...prev,
           monthlyIncome: Number(data.monthlyIncome || 0),
@@ -234,7 +232,6 @@ const Dashboard = () =>
           recentTransactions: recent,
         }));
 
-        // For monthly time frame, use server data for gauges
         if (timeFrame === "monthly") {
           const monthlyIncome = Number(data.monthlyIncome || 0);
           const monthlyExpense = Number(data.monthlyExpense || 0);
